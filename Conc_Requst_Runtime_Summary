@@ -1,0 +1,33 @@
+ SELECT f.application_short_name                                                                                          "APP_NAME",
+  SUBSTR(p.user_concurrent_program_name,1,55)                                                                             "PROGRAM NAME",
+  SUBSTR(p.concurrent_program_name,1,20)                                                                                  "EXECUTABLE",
+  r.priority,
+  COUNT(                        *)                                                                                        "NUM_EXEC",
+  round(SUM(actual_completion_date    - actual_start_date) * 1440,1)                                                      "TOTAL_EXEC_TIME",
+  round(AVG(actual_completion_date    - actual_start_date) * 1440,1)                                                      "AVG_EXEC_TIME",
+  round(MAX(actual_completion_date    - actual_start_date) * 1440,1)                                                       "MAX_EXEC_TIME",
+  round(MIN(actual_completion_date    - actual_start_date) * 1440,1)                                                       "MIN_EXEC_TIME",
+  round(stddev(actual_completion_date - actual_start_date) * 1440,1)                                                       "STDDEV_EXEC_TIME",
+  round(stddev(actual_start_date      - greatest(r.requested_start_date,r.request_date)) * 1440,1)                         "STDDEV_PENDING_TIME",                   
+  round(SUM(actual_start_date         - greatest(r.requested_start_date,r.request_date)) * 1440,1)                         "SUM_PENDING_TIME",
+  round(AVG(actual_start_date         - greatest(r.requested_start_date,r.request_date)) * 1440,1)                         "AVG_PENDING_TIME",
+  c.request_class_name
+FROM apps.fnd_concurrent_request_class c,
+  apps.fnd_application f,
+  apps.fnd_concurrent_programs_vl p,
+  apps.fnd_concurrent_requests r
+WHERE r.program_application_id     = p.application_id
+AND r.concurrent_program_id        = p.concurrent_program_id
+AND r.status_code                 IN ('C','G')
+AND r.phase_code                   = 'C'
+AND p.application_id               = f.application_id
+AND r.program_application_id       = f.application_id
+AND r.request_class_application_id = c.application_id(+)
+AND r.concurrent_request_class_id  = c.request_class_id(+)
+AND p.user_concurrent_program_name = 'MG EDI Preprocessor Order Import'
+GROUP BY c.request_class_name,
+  f.application_short_name,
+  p.concurrent_program_name,
+  p.user_concurrent_program_name,
+  r.priority
+ORDER BY COUNT(*);
